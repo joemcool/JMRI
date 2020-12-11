@@ -10,6 +10,7 @@ import java.awt.event.ActionListener;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Vector;
+
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -42,6 +43,7 @@ import jmri.implementation.TripleOutputSignalHead;
 import jmri.implementation.TripleTurnoutSignalHead;
 import jmri.jmrix.acela.AcelaAddress;
 import jmri.jmrix.acela.AcelaNode;
+import jmri.jmrix.mqtt.MqttSystemConnectionMemo;
 import jmri.util.ConnectionNameFromSystemName;
 import jmri.util.JmriJFrame;
 import jmri.util.swing.BeanSelectCreatePanel;
@@ -54,6 +56,7 @@ import org.slf4j.LoggerFactory;
  * @author Bob Jacobsen Copyright (C) 2003,2006,2007, 2008, 2009
  * @author Petr Koud'a Copyright (C) 2007
  * @author Egbert Broerse Copyright (C) 2016
+ * @author Joe Martin Copyright (C) 2020
  */
 public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
 
@@ -568,6 +571,7 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
     private String dccSignalDecoder = Bundle.getMessage("StringDccSigDec");
     private String mergSignalDriver = Bundle.getMessage("StringMerg");
     private String singleTurnout = Bundle.getMessage("StringSingle");
+    private String mqttTripleOutput = Bundle.getMessage("StringMqttTripleOutput");
 
     private JComboBox<String> prefixBox = new JComboBox<String>();
     private JLabel prefixBoxLabel = new JLabel(Bundle.getMessage("MakeLabel", Bundle.getMessage("DCCSystem")));
@@ -755,7 +759,8 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
             JPanel panelHeader = new JPanel();
             panelHeader.setLayout(new BoxLayout(panelHeader, BoxLayout.Y_AXIS));
             panelHeader.add(typeBox = new JComboBox<String>(new String[]{
-                acelaAspect, dccSignalDecoder, doubleTurnout, lsDec, mergSignalDriver, quadOutput,
+                    //TODO Do we need to validate whether MQTT has been configured? May avoid null options when trying to create signal head... 
+                acelaAspect, dccSignalDecoder, doubleTurnout, lsDec, mergSignalDriver, mqttTripleOutput, quadOutput,
                 singleTurnout, se8c4Aspect, tripleTurnout, tripleOutput, virtualHead
             }));
             // If no DCC Command station is found, remove the DCC Signal Decoder option.
@@ -1066,6 +1071,13 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
             s3aBox.setVisible(true);
             v3Panel.setVisible(true);
         } else if (virtualHead.equals(typeBox.getSelectedItem())) {
+            systemNameLabel.setText(Bundle.getMessage("LabelSystemName"));
+            systemNameTextField.setToolTipText(Bundle.getMessage("SignalHeadSysNameTooltip"));
+            systemNameLabel.setVisible(true);
+            systemNameTextField.setVisible(true);
+            userNameLabel.setText(Bundle.getMessage("LabelUserName"));
+        } else if (mqttTripleOutput.equals(typeBox.getSelectedItem())) {    // MQTT Triple Output Signal Head
+            //TODO starting with virtual head settings for now, may need to add more later (eg canFlash, send and rcv topics)
             systemNameLabel.setText(Bundle.getMessage("LabelSystemName"));
             systemNameTextField.setToolTipText(Bundle.getMessage("SignalHeadSysNameTooltip"));
             systemNameLabel.setVisible(true);
@@ -1480,6 +1492,31 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
             } else if (virtualHead.equals(typeBox.getSelectedItem())) {
                 if (checkBeforeCreating(systemNameTextField.getText())) {
                     s = new jmri.implementation.VirtualSignalHead(systemNameTextField.getText(), userNameTextField.getText());
+                    InstanceManager.getDefault(jmri.SignalHeadManager.class).register(s);
+                }
+            } else if (mqttTripleOutput.equals(typeBox.getSelectedItem())) {    // MQTT Triple Output Signal Head
+                if (checkBeforeCreating(systemNameTextField.getText())) {
+                    String systemName = systemNameTextField.getText();
+                    String userName = userNameTextField.getText();
+                    
+                    MqttSystemConnectionMemo memo = InstanceManager.getDefault(jmri.jmrix.mqtt.MqttSystemConnectionMemo.class);
+                    //TODO catch null pointer exception
+                    
+                    String topicPrefix = memo.getMqttAdapter().getOptionState("14");    // TopicSignalHead
+                    //TODO check for null string, shouldn't happen, but might if MQTT not set up, handle gracefully
+                    
+                    // Get topic suffix (systemName without system prefix)
+                    String suffix = systemName.substring(memo.getSystemPrefix().length() + 1);
+
+                    String sendTopic = java.text.MessageFormat.format(
+                        topicPrefix.contains("{0}") ? topicPrefix : (topicPrefix + "{0}"),
+                        suffix);
+                    String rcvTopic = java.text.MessageFormat.format(
+                        topicPrefix.contains("{0}") ? topicPrefix : (topicPrefix + "{0}"),
+                        suffix);
+                    
+                    s = new jmri.implementation.MqttTripleOutputSignalHead(memo.getMqttAdapter(), systemName, userName, sendTopic, rcvTopic);
+                    s.setUserName(userName);
                     InstanceManager.getDefault(jmri.SignalHeadManager.class).register(s);
                 }
             } else if (lsDec.equals(typeBox.getSelectedItem())) { // LDT LS-DEC
@@ -2129,6 +2166,13 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
             setSignalStateInBox(es3aBox, ((SingleTurnoutSignalHead) curS).getOffAppearance());
         } else if (className.equals("jmri.implementation.VirtualSignalHead")) {
             signalType.setText(virtualHead);
+            eSystemNameLabel.setText(Bundle.getMessage("LabelSystemName"));
+            eSysNameLabel.setText(curS.getSystemName());
+            eUserNameLabel.setText(Bundle.getMessage("LabelUserName"));
+            eUserName.setText(curS.getUserName());
+        } else if (className.equals("jmri.implementation.MqttTripleOutputSignalHead")) {    // MQTT Triple Output Signal Head
+            //TODO update to reflect any changes to creation dialog
+            signalType.setText(mqttTripleOutput);
             eSystemNameLabel.setText(Bundle.getMessage("LabelSystemName"));
             eSysNameLabel.setText(curS.getSystemName());
             eUserNameLabel.setText(Bundle.getMessage("LabelUserName"));
