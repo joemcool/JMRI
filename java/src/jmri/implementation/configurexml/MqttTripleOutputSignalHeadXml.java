@@ -45,8 +45,16 @@ public class MqttTripleOutputSignalHeadXml extends AbstractNamedBeanManagerConfi
 
         // include contents
         element.addContent(new Element("systemName").addContent(p.getSystemName()));
-
+        
+        // Store common elements, including userName, which must come before canFlash
         storeCommon(p, element);
+        
+        // Store canFlash
+        if (p.canFlash()){
+            element.addContent(new Element("canFlash").addContent("yes"));
+        } else {
+            element.addContent(new Element("canFlash").addContent("no"));
+        }
 
         return element;
     }
@@ -56,13 +64,19 @@ public class MqttTripleOutputSignalHeadXml extends AbstractNamedBeanManagerConfi
         // put it together
         String sys = getSystemName(shared);
         String uname = getUserName(shared);
+        boolean canFlash = false;
         SignalHead h;
         
-        MqttSystemConnectionMemo memo = InstanceManager.getDefault(jmri.jmrix.mqtt.MqttSystemConnectionMemo.class);
-        //TODO catch null pointer exception
+        MqttSystemConnectionMemo memo;
+        try {
+            memo = InstanceManager.getDefault(jmri.jmrix.mqtt.MqttSystemConnectionMemo.class);
+        } catch (NullPointerException e) {
+            // Null here means we have MQTT signal heads defined, but no MQTT broker.
+            log.error("Trying to load MQTT Signal Heads, but no MQTT brokers defined.  You must add an MQTT connection before loading this file.");
+            return false;
+        }
         
         String topicPrefix = memo.getMqttAdapter().getOptionState("14");    // TopicSignalHead
-        //TODO check for null string, shouldn't happen, but might if MQTT not set up, handle gracefully
         
         // Get topic suffix (systemName without system prefix)
         String suffix = sys.substring(memo.getSystemPrefix().length() + 1);
@@ -74,10 +88,15 @@ public class MqttTripleOutputSignalHeadXml extends AbstractNamedBeanManagerConfi
             topicPrefix.contains("{0}") ? topicPrefix : (topicPrefix + "{0}"),
             suffix);
         
+        // read element for canFlash
+        if (shared.getChild("canFlash") != null) {
+            canFlash = shared.getChild("canFlash").getText().equals("yes");
+        }
+        
         if (uname == null) {
-            h = new MqttTripleOutputSignalHead(memo.getMqttAdapter(), sys, null, sendTopic, rcvTopic);;
+            h = new MqttTripleOutputSignalHead(memo.getMqttAdapter(), sys, null, sendTopic, rcvTopic,canFlash);
         } else {
-            h = new MqttTripleOutputSignalHead(memo.getMqttAdapter(), sys, uname, sendTopic, rcvTopic);;
+            h = new MqttTripleOutputSignalHead(memo.getMqttAdapter(), sys, uname, sendTopic, rcvTopic,canFlash);
         }
 
         loadCommon(h, shared);

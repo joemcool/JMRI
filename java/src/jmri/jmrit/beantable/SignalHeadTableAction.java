@@ -35,6 +35,7 @@ import jmri.NamedBeanHandle;
 import jmri.SignalHead;
 import jmri.SignalHeadManager;
 import jmri.Turnout;
+import jmri.implementation.AbstractMqttSignalHead;
 import jmri.implementation.DccSignalHead;
 import jmri.implementation.DoubleTurnoutSignalHead;
 import jmri.implementation.QuadOutputSignalHead;
@@ -529,6 +530,8 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
     private JLabel systemNameLabel = new JLabel("");
     private JLabel userNameLabel = new JLabel("");
 
+    private JPanel cbPanel = new JPanel();
+    
     private JPanel v1Panel = new JPanel();
     private JPanel v2Panel = new JPanel();
     private JPanel v3Panel = new JPanel();
@@ -557,6 +560,8 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
     private JComboBox<String> stBox = new JComboBox<String>(signalheadTypes); // Acela signal types
     private JComboBox<String> mstBox = new JComboBox<String>(ukSignalType);
     private JComboBox<String> msaBox = new JComboBox<String>(ukSignalAspects);
+    //TODO should this be sharable like other inputs?
+    private JCheckBox mqttCanFlashCb = new JCheckBox(Bundle.getMessage("mqttCanFlashCbLabel"));
 
     private String acelaAspect = Bundle.getMessage("StringAcelaaspect");
     private String se8c4Aspect = Bundle.getMessage("StringSE8c4aspect");
@@ -759,8 +764,7 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
             JPanel panelHeader = new JPanel();
             panelHeader.setLayout(new BoxLayout(panelHeader, BoxLayout.Y_AXIS));
             panelHeader.add(typeBox = new JComboBox<String>(new String[]{
-                    //TODO Do we need to validate whether MQTT has been configured? May avoid null options when trying to create signal head... 
-                acelaAspect, dccSignalDecoder, doubleTurnout, lsDec, mergSignalDriver, mqttTripleOutput, quadOutput,
+                acelaAspect, dccSignalDecoder, doubleTurnout, lsDec, mergSignalDriver, quadOutput,
                 singleTurnout, se8c4Aspect, tripleTurnout, tripleOutput, virtualHead
             }));
             // If no DCC Command station is found, remove the DCC Signal Decoder option.
@@ -770,6 +774,11 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
             List<jmri.jmrix.grapevine.GrapevineSystemConnectionMemo> memos = InstanceManager.getList(jmri.jmrix.grapevine.GrapevineSystemConnectionMemo.class);
             if (!memos.isEmpty()) {
                 typeBox.addItem(grapevine);
+            }
+            // For MQTT Signal Heads
+            List<jmri.jmrix.mqtt.MqttSystemConnectionMemo> mqttMemos = InstanceManager.getList(jmri.jmrix.mqtt.MqttSystemConnectionMemo.class);
+            if (!mqttMemos.isEmpty()) { // If at least one MQTT broker is connected
+                typeBox.addItem(mqttTripleOutput); // Add MQTT Triple Output to selection options
             }
             typeBox.addActionListener(new ActionListener() {
                 @Override
@@ -812,6 +821,12 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
             //typeBox.setSelectedIndex(7);
             //typeChanged();
 
+            // create panel for MQTT checkbox
+            cbPanel = new JPanel();
+            cbPanel.setLayout(new FlowLayout());
+            cbPanel.add(mqttCanFlashCb);
+            panelCentre.add(cbPanel);
+            
             // create seven boxes for input information, and put into pane
             v1Panel = new JPanel();
             v1Panel.setLayout(new FlowLayout());
@@ -924,6 +939,7 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
     }
 
     private void hideAllOptions() {
+        mqttCanFlashCb.setVisible(false);
         ato1TextField.setVisible(false);
         prefixBoxLabel.setVisible(false);
         prefixBox.setVisible(false);
@@ -1077,12 +1093,13 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
             systemNameTextField.setVisible(true);
             userNameLabel.setText(Bundle.getMessage("LabelUserName"));
         } else if (mqttTripleOutput.equals(typeBox.getSelectedItem())) {    // MQTT Triple Output Signal Head
-            //TODO starting with virtual head settings for now, may need to add more later (eg canFlash, send and rcv topics)
+            //TODO may need to add more settings later (multiple brokers)
             systemNameLabel.setText(Bundle.getMessage("LabelSystemName"));
-            systemNameTextField.setToolTipText(Bundle.getMessage("SignalHeadSysNameTooltip"));
+            systemNameTextField.setToolTipText(Bundle.getMessage("SignalHeadMqttTooltip"));
             systemNameLabel.setVisible(true);
             systemNameTextField.setVisible(true);
             userNameLabel.setText(Bundle.getMessage("LabelUserName"));
+            mqttCanFlashCb.setVisible(true);
         } else if (lsDec.equals(typeBox.getSelectedItem())) { // LDT LS-DEC
             systemNameLabel.setText(Bundle.getMessage("LabelSystemName"));
             systemNameTextField.setToolTipText(Bundle.getMessage("SignalHeadSysNameTooltip"));
@@ -1498,12 +1515,11 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
                 if (checkBeforeCreating(systemNameTextField.getText())) {
                     String systemName = systemNameTextField.getText();
                     String userName = userNameTextField.getText();
-                    
+
+                    // Get connection memo.  Existence already checked above, when option added to type selection box
                     MqttSystemConnectionMemo memo = InstanceManager.getDefault(jmri.jmrix.mqtt.MqttSystemConnectionMemo.class);
-                    //TODO catch null pointer exception
                     
                     String topicPrefix = memo.getMqttAdapter().getOptionState("14");    // TopicSignalHead
-                    //TODO check for null string, shouldn't happen, but might if MQTT not set up, handle gracefully
                     
                     // Get topic suffix (systemName without system prefix)
                     String suffix = systemName.substring(memo.getSystemPrefix().length() + 1);
@@ -1515,7 +1531,7 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
                         topicPrefix.contains("{0}") ? topicPrefix : (topicPrefix + "{0}"),
                         suffix);
                     
-                    s = new jmri.implementation.MqttTripleOutputSignalHead(memo.getMqttAdapter(), systemName, userName, sendTopic, rcvTopic);
+                    s = new jmri.implementation.MqttTripleOutputSignalHead(memo.getMqttAdapter(), systemName, userName, sendTopic, rcvTopic, mqttCanFlashCb.isSelected());
                     s.setUserName(userName);
                     InstanceManager.getDefault(jmri.SignalHeadManager.class).register(s);
                 }
@@ -1818,6 +1834,8 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
     private JPanel ev5Panel = new JPanel();
     private JPanel ev6Panel = new JPanel();
     private JPanel ev7Panel = new JPanel();
+    
+    private JPanel eCbPanel = new JPanel();
 
     private TitledBorder ev1Border = BorderFactory.createTitledBorder(blackline);
     private TitledBorder ev2Border = BorderFactory.createTitledBorder(blackline);
@@ -1846,6 +1864,7 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
     private JComboBox<String> estBox = new JComboBox<String>(signalheadTypes);
     private JComboBox<String> emstBox = new JComboBox<String>(ukSignalType);
     private JComboBox<String> emsaBox = new JComboBox<String>(ukSignalAspects);
+    private JCheckBox eMqttCanFlashCb = new JCheckBox(Bundle.getMessage("mqttCanFlashCbLabel"));
 
     private void editSignal(int row) {
         // Logix was found, initialize for edit
@@ -1936,6 +1955,11 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
             JPanel panelCentre = new JPanel();
             panelCentre.setLayout(new BoxLayout(panelCentre, BoxLayout.Y_AXIS));
 
+            eCbPanel = new JPanel();
+            eCbPanel.setLayout(defaultFlow);
+            eCbPanel.add(eMqttCanFlashCb);
+            panelCentre.add(eCbPanel);
+            
             ev1Panel = new JPanel();
             ev1Panel.setLayout(defaultFlow);
             ev1Panel.add(eto1);
@@ -2071,6 +2095,7 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
         estBox.setVisible(false);
         emstBox.setVisible(false);
         emsaBox.setVisible(false);
+        eMqttCanFlashCb.setVisible(false);
         // determine class name of signal head and initialize edit panel for this class of signal
         className = curS.getClass().getName();
         if (className.equals("jmri.implementation.QuadOutputSignalHead")) {
@@ -2170,13 +2195,15 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
             eSysNameLabel.setText(curS.getSystemName());
             eUserNameLabel.setText(Bundle.getMessage("LabelUserName"));
             eUserName.setText(curS.getUserName());
-        } else if (className.equals("jmri.implementation.MqttTripleOutputSignalHead")) {    // MQTT Triple Output Signal Head
+        } else if (jmri.implementation.AbstractMqttSignalHead.class.isAssignableFrom(curS.getClass())) {    // MQTT Triple Output Signal Head
             //TODO update to reflect any changes to creation dialog
             signalType.setText(mqttTripleOutput);
             eSystemNameLabel.setText(Bundle.getMessage("LabelSystemName"));
             eSysNameLabel.setText(curS.getSystemName());
             eUserNameLabel.setText(Bundle.getMessage("LabelUserName"));
             eUserName.setText(curS.getUserName());
+            eMqttCanFlashCb.setVisible(true);
+            eMqttCanFlashCb.setSelected(((jmri.implementation.AbstractMqttSignalHead) curS).canFlash());
         } else if (className.equals("jmri.implementation.LsDecSignalHead")) { // LDT LS-DEC
             signalType.setText(lsDec);
             eSystemNameLabel.setText(Bundle.getMessage("LabelSystemName"));
@@ -2579,6 +2606,8 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
              if(checkUserName(nam))
              curS.setUserName(nam);
              }*/
+        } else if (jmri.implementation.AbstractMqttSignalHead.class.isAssignableFrom(curS.getClass())) { 
+            ((jmri.implementation.AbstractMqttSignalHead) curS).setCanFlash(eMqttCanFlashCb.isSelected());
         } else if (className.equals("jmri.jmrix.acela.AcelaSignalHead")) {
             /*String nam = eUserName.getText();
              // check if user name changed

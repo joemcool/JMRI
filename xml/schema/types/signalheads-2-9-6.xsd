@@ -51,6 +51,7 @@
             <jmri:usingclass configurexml="true">jmri.implementation.configurexml.SE8cSignalHeadXml</jmri:usingclass>
             <jmri:usingclass configurexml="true">jmri.implementation.configurexml.TripleTurnoutSignalHeadXml</jmri:usingclass>
             <jmri:usingclass configurexml="true">jmri.implementation.configurexml.VirtualSignalHeadXml</jmri:usingclass>
+            <jmri:usingclass configurexml="true">jmri.implementation.configurexml.MqttTripleOutputSignalHeadXml</jmri:usingclass>
             <jmri:usingclass configurexml="true">jmri.jmrix.acela.configurexml.AcelaSignalHeadXml</jmri:usingclass>
             <jmri:usingclass configurexml="true">jmri.jmrix.grapevine.configurexml.SerialSignalHeadXml</jmri:usingclass>
             <jmri:usingclass configurexml="true">jmri.jmrix.loconet.configurexml.SE8cSignalHeadXml</jmri:usingclass>
@@ -63,6 +64,7 @@
         <xs:element name="userName" type="userNameType" minOccurs="0" maxOccurs="1"/>
         <xs:element name="comment" type="commentType" minOccurs="0" maxOccurs="1" />
         <xs:element name="useAddressOffSet" type="yesNoType" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="canFlash" type="yesNoType" minOccurs="0" maxOccurs="1" />
         <xs:element name="packetsendcount" type="xs:int" minOccurs="0" maxOccurs="1"/>
         <xs:element name="turnout" minOccurs="0" maxOccurs="unbounded" >
           <xs:annotation><xs:documentation>
