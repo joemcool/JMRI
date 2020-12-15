@@ -1,5 +1,5 @@
 package jmri.implementation;
-////TODO putting this in implementation implies JMRI should treat MQTT like DCC (loconet and nce as well?): as a high-level interface and not a specific implementation.  Is this desirable?  Alternative is to put it in MQTT, and change AbstractSignalHead's abstract members to all be "protected" (eg isTurnoutUsed() is private), similar to Acela
+//TODO putting this in implementation implies JMRI should treat MQTT like DCC (loconet and nce as well?): as a high-level interface and not a specific implementation.  Is this desirable?  Alternative is to put it in jmri.jmrix.mqtt, and change AbstractSignalHead's abstract members to all be "protected" (eg isTurnoutUsed() is private), similar to Acela
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +19,7 @@ public class MqttTripleOutputSignalHead extends AbstractMqttSignalHead implement
 //    }
     
     @SuppressWarnings("unused")
-    final static private int[] VALID_STATES = new int[]{
+    final static private int[] validStates = new int[]{
             DARK,
             RED,
             YELLOW,
@@ -30,7 +30,7 @@ public class MqttTripleOutputSignalHead extends AbstractMqttSignalHead implement
     }; // No int for Lunar
 
     @SuppressWarnings("unused")
-    final static private String[] VALID_STATE_KEYS = new String[]{
+    final static private String[] validStateKeys = new String[]{
             "SignalHeadStateDark",
             "SignalHeadStateRed",
             "SignalHeadStateYellow",

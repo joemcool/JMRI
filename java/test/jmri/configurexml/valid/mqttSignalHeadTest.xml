@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet href="/xml/XSLT/panelfile-4-19-2.xsl" type="text/xsl"?>
+<layout-config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://jmri.org/xml/schema/layout-4-19-2.xsd">
+  <jmriversion>
+    <major>4</major>
+    <minor>21</minor>
+    <test>3</test>
+    <modifier>ish</modifier>
+  </jmriversion>
+  <signalheads class="jmri.managers.configurexml.AbstractSignalHeadManagerXml">
+    <signalhead class="jmri.implementation.configurexml.MqttTripleOutputSignalHeadXml">
+      <systemName>MH1</systemName>
+      <userName>test user name</userName>
+      <canFlash>true</canFlash>
+    </signalhead>
+  </signalheads>
+  <signalmastlogics class="jmri.managers.configurexml.DefaultSignalMastLogicManagerXml">
+    <logicDelay>500</logicDelay>
+  </signalmastlogics>
+  <filehistory>
+    <operation>
+      <type>app</type>
+      <date>Tue Dec 15 08:24:52 EST 2020</date>
+      <filename>JMRI program</filename>
+    </operation>
+    <operation>
+      <type>Load OK</type>
+      <date>Tue Dec 15 08:25:03 EST 2020</date>
+      <filename>/home/joe/.jmri/test.jmri/mqttSignalHeadTest.xml</filename>
+      <filehistory>
+        <operation>
+          <type>app</type>
+          <date>Mon Dec 14 14:54:08 EST 2020</date>
+          <filename>JMRI program</filename>
+        </operation>
+        <operation>
+          <type>Load OK</type>
+          <date>Mon Dec 14 14:54:50 EST 2020</date>
+          <filename>/home/joe/.jmri/test.jmri/mqttSignalHeadTest.xml</filename>
+          <filehistory>
+            <operation>
+              <type>app</type>
+              <date>Mon Dec 14 14:17:38 EST 2020</date>
+              <filename>JMRI program</filename>
+            </operation>
+            <operation>
+              <type>Load OK</type>
+              <date>Mon Dec 14 14:17:55 EST 2020</date>
+              <filename>/home/joe/.jmri/test.jmri/mqttSignalHeadTest.xml</filename>
+              <filehistory>
+                <operation>
+                  <type>app</type>
+                  <date>Mon Dec 14 14:08:58 EST 2020</date>
+                  <filename>JMRI program</filename>
+                </operation>
+                <operation>
+                  <type>Load OK</type>
+                  <date>Mon Dec 14 14:09:08 EST 2020</date>
+                  <filename>/home/joe/.jmri/test.jmri/mqttSignalHeadTest.xml</filename>
+                  <filehistory>
+                    <operation>
+                      <type>app</type>
+                      <date>Thu Dec 10 23:25:33 EST 2020</date>
+                      <filename>JMRI program</filename>
+                    </operation>
+                    <operation>
+                      <type>Store</type>
+                      <date>Thu Dec 10 23:27:40 EST 2020</date>
+                      <filename />
+                    </operation>
+                  </filehistory>
+                </operation>
+                <operation>
+                  <type>Store</type>
+                  <date>Mon Dec 14 14:09:36 EST 2020</date>
+                  <filename />
+                </operation>
+              </filehistory>
+            </operation>
+            <operation>
+              <type>Store</type>
+              <date>Mon Dec 14 14:18:26 EST 2020</date>
+              <filename />
+            </operation>
+          </filehistory>
+        </operation>
+        <operation>
+          <type>Store</type>
+          <date>Mon Dec 14 14:55:16 EST 2020</date>
+          <filename />
+        </operation>
+      </filehistory>
+    </operation>
+    <operation>
+      <type>Store</type>
+      <date>Tue Dec 15 08:25:32 EST 2020</date>
+      <filename />
+    </operation>
+  </filehistory>
+  <!--Written by JMRI version 4.21.3ish+joe+2020-12-15T13:24:49Z+R9f2231299b on Tue Dec 15 08:25:32 EST 2020-->
+</layout-config>

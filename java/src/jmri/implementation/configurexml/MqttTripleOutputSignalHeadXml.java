@@ -25,13 +25,13 @@ import jmri.managers.configurexml.AbstractNamedBeanManagerConfigXML;
 public class MqttTripleOutputSignalHeadXml extends AbstractNamedBeanManagerConfigXML {
 
     /**
-     * 
+     * Default constructor, doesn't do anything.
      */
     public MqttTripleOutputSignalHeadXml() {
     }
 
     /**
-     * Default implementation for storing the contents of a MqttTripleOutputSignalHead.
+     * Call for storing the contents of a MqttTripleOutputSignalHead.
      *
      * @param o Object to store, of type MqttTripleOutputSignalHead
      * @return Element containing the complete info
@@ -51,14 +51,20 @@ public class MqttTripleOutputSignalHeadXml extends AbstractNamedBeanManagerConfi
         
         // Store canFlash
         if (p.canFlash()){
-            element.addContent(new Element("canFlash").addContent("yes"));
+            element.addContent(new Element("canFlash").addContent("true"));
         } else {
-            element.addContent(new Element("canFlash").addContent("no"));
+            element.addContent(new Element("canFlash").addContent("false"));
         }
 
         return element;
     }
 
+    /**
+     * Call for loading an MqttTripleOutputSignalHead from XML and instantiating the object
+     * 
+     * @param shared
+     * @param perNode
+     */
     @Override
     public boolean load(Element shared, Element perNode) {
         // put it together
@@ -90,7 +96,7 @@ public class MqttTripleOutputSignalHeadXml extends AbstractNamedBeanManagerConfi
         
         // read element for canFlash
         if (shared.getChild("canFlash") != null) {
-            canFlash = shared.getChild("canFlash").getText().equals("yes");
+            canFlash = shared.getChild("canFlash").getText().equals("true");
         }
         
         if (uname == null) {

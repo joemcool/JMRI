@@ -1,5 +1,7 @@
 package jmri.implementation;
-//TODO putting this in implementation implies JMRI should treat MQTT like DCC (loconet and nce as well?): as a high-level interface and not a specific implementation.  Is this desirable?  Alternative is to put it in MQTT, and change AbstractSignalHead's abstract members to all be "protected" (eg isTurnoutUsed() is private), similar to Acela
+//TODO putting this in implementation implies JMRI should treat MQTT like DCC (loconet and nce as well?): as a high-level interface and not a specific implementation.  Is this desirable?  Alternative is to put it in jmri.jmrix.mqtt, and change AbstractSignalHead's abstract members to all be "protected" (eg isTurnoutUsed() is private), similar to Acela
+
+import java.util.Arrays;
 
 import javax.annotation.Nonnull;
 
@@ -55,7 +57,7 @@ public abstract class AbstractMqttSignalHead extends AbstractSignalHead implemen
 
     public static int masterDelay = 750;
     
-    final static private int[] VALID_STATES = new int[]{
+    final static private int[] validStates = new int[]{
             DARK,
             RED,
             YELLOW,
@@ -65,7 +67,7 @@ public abstract class AbstractMqttSignalHead extends AbstractSignalHead implemen
             FLASHGREEN,
     }; // No int for Lunar
 
-    final static private String[] VALID_STATE_KEYS = new String[]{
+    final static private String[] validStateKeys = new String[]{
             "SignalHeadStateDark",
             "SignalHeadStateRed",
             "SignalHeadStateYellow",
@@ -77,12 +79,16 @@ public abstract class AbstractMqttSignalHead extends AbstractSignalHead implemen
 
 
     public AbstractMqttSignalHead(MqttAdapter ma, String systemName, String userName, String sendTopic, String rcvTopic, boolean canFlash) {
+        // Initialize object
         super(systemName, userName);
         this.sendTopic = sendTopic;
         this.rcvTopic = rcvTopic;
         this.mqttAdapter = ma;
         this.mCanFlash = canFlash;
         this.mqttAdapter.subscribe(rcvTopic, this);
+        
+        // Initialize HW
+        updateOutput();
     }
 
     @Override
@@ -270,10 +276,18 @@ public abstract class AbstractMqttSignalHead extends AbstractSignalHead implemen
      * {@inheritDoc}
      */
     @Override
+    public int[] getValidStates() {
+        return Arrays.copyOf(validStates, validStates.length);
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public String[] getValidStateNames() {
-        String[] stateNames = new String[VALID_STATE_KEYS.length];
+        String[] stateNames = new String[validStateKeys.length];
         int i = 0;
-        for (String stateKey : VALID_STATE_KEYS) {
+        for (String stateKey : validStateKeys) {
             stateNames[i++] = Bundle.getMessage(stateKey);
         }
         return stateNames;
@@ -314,9 +328,7 @@ public abstract class AbstractMqttSignalHead extends AbstractSignalHead implemen
             toSend = parser.payloadFromBean(this, mAppearance);
             
         }
-        
-        //TODO catch IllegalArgumentException from payloadFromBean
-        
+                
         sendMessage(toSend);
     }   
     
@@ -401,8 +413,6 @@ public abstract class AbstractMqttSignalHead extends AbstractSignalHead implemen
          * <p>
          * Takes a new appearance and translates it into the appropreate MQTT
          * message payload.
-         * 
-         * @todo throw IllegalArgumentException when given unsupported appearance?
          * 
          * @param bean the Signal Head to be updated
          * @param appearance the appearance to translated
