@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 import jmri.InstanceManager;
 import jmri.SignalHead;
 import jmri.implementation.MqttTripleOutputSignalHead;
-import jmri.implementation.VirtualSignalHead;
 import jmri.jmrix.mqtt.MqttSystemConnectionMemo;
 import jmri.managers.configurexml.AbstractNamedBeanManagerConfigXML;
 
@@ -62,8 +61,8 @@ public class MqttTripleOutputSignalHeadXml extends AbstractNamedBeanManagerConfi
     /**
      * Call for loading an MqttTripleOutputSignalHead from XML and instantiating the object
      * 
-     * @param shared
-     * @param perNode
+     * @param shared Multi-node element describing this object
+     * @param perNode single-node element describing this object
      */
     @Override
     public boolean load(Element shared, Element perNode) {

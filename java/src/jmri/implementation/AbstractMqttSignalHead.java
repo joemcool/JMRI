@@ -24,7 +24,6 @@ import org.slf4j.LoggerFactory;
  * Based upon {@link jmri.implementation.DefaultSignalHead} by Bob Jacobsen
  * Based upon {@link jmri.implementation.DccSignalHead} by Alex Shepherd
  * Based upon {@link jmri.jmrix.mqtt.MqttLight} by Bob Jacobsen, Paul Bender, and Fredrik Elestedt
-
  *
  * @author Joe Martin Copyright (C) 2020
  */
@@ -292,6 +291,27 @@ public abstract class AbstractMqttSignalHead extends AbstractSignalHead implemen
         }
         return stateNames;
     }
+    
+//    /**
+//     * {@inheritDoc}
+//     */
+//    @Override
+//    public static int[] getDefaultValidStates() {
+//        return Arrays.copyOf(validStates, validStates.length);
+//    }
+//
+//    /**
+//     * {@inheritDoc}
+//     */
+//    @Override
+//    public static String[] getDefaultValidStateNames() {
+//        String[] stateNames = new String[validStateKeys.length];
+//        int i = 0;
+//        for (String stateKey : validStateKeys) {
+//            stateNames[i++] = Bundle.getMessage(stateKey);
+//        }
+//        return stateNames;
+//    }
 
     /**
      * General routine to handle output to the layout hardware.
@@ -321,6 +341,8 @@ public abstract class AbstractMqttSignalHead extends AbstractSignalHead implemen
                 || (mAppearance == FLASHRED))
                 && !mCanFlash) {
 
+            log.info("In a flash, so sending DARK");
+            
             toSend = parser.payloadFromBean(this, DARK);
 
         } else {
@@ -422,7 +444,9 @@ public abstract class AbstractMqttSignalHead extends AbstractSignalHead implemen
 
             // Send the JMRI state name as a message to the MQTT device
             //TODO is this correct? Will this return an internationalized version of state name? Thats bad, right?  Consider moving away from "as shown in JMRI" using Bundle properties and go to specific strings based on those values.  Also could remove white space from "Flashing Red"
-            String toReturn = jmri.util.StringUtil.getNameFromState(mAppearance, getValidStates(), getValidStateNames());
+            String toReturn = jmri.util.StringUtil.getNameFromState(appearance, getValidStates(), getValidStateNames());
+            
+//            log.info("Got appearance {}, sending string {}",appearance,toReturn);
             
             if (toReturn == null) {
                 log.error("Got unsupported appearance \"{}\", should never happen!",appearance);

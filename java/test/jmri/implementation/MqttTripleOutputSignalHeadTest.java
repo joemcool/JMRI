@@ -1,25 +1,24 @@
 package jmri.implementation;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 import org.junit.Assert;
 import org.junit.jupiter.api.*;
 import org.python.jline.internal.Log;
 
-import io.cucumber.core.logging.Logger;
-import jmri.InstanceManager;
-import jmri.Light;
-import jmri.NamedBeanHandle;
 import jmri.SignalHead;
-import jmri.Turnout;
-import jmri.TurnoutManager;
 import jmri.jmrix.mqtt.MqttAdapter;
 import jmri.util.JUnitAppender;
 import jmri.util.JUnitUtil;
 
-//TODO based on TripleOutputSignalHead, MqttLightTest
 /**
+ * Test cases for MQTT Triple Output Signal Head
  * 
- * @author joe
- *
+ * Based upon {@link jmri.implementation.TripleOutputSignalHeadTest} by Paul Bender
+ * Based upon {@link jmri.jmrix.mqtt.MqttLightTest} by Bob Jacobsen
+ * 
+ * @author Joe Martin Copyright (C) 2020
  */
 public class MqttTripleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
 
@@ -27,6 +26,8 @@ public class MqttTripleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
     MqttAdapter a;
     String saveTopic;
     byte[] savePayload;
+    CountDownLatch latch;
+    boolean flashOn;
 
     boolean subBeforeConfigWarningSent;
 
@@ -65,6 +66,7 @@ public class MqttTripleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
         JUnitUtil.setUp();
 
         subBeforeConfigWarningSent = false;
+        flashOn = false;
         saveTopic = null;
         savePayload = null;
         a = new MqttAdapter(){
@@ -72,6 +74,65 @@ public class MqttTripleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
             public void publish(String topic, byte[] payload) {
                 saveTopic = topic;
                 savePayload = payload;
+                                
+                // flash test latching, here so it can be called by timer thread
+                if (latch != null) {
+                    String savePayloadString = new String (savePayload);
+                    if (flashOn) {
+                        if (
+                                saveTopic.equals(sendTopic)
+                                && savePayloadString.equals(
+                                        jmri.util.StringUtil.getNameFromState(MqttTripleOutputSignalHead.DARK,  //TODO if implementing FLASHDARK, update this
+                                                MqttTripleOutputSignalHead.getDefaultValidStates(),
+                                                MqttTripleOutputSignalHead.getDefaultValidStateNames()
+                                                )
+                                        )
+                                ) {                            
+                            flashOn = false;
+                        } else {
+                            Log.warn("Got unexpected message ",savePayloadString);
+                        }
+                    } else {    // flash is off
+                        if (
+                                saveTopic.equals(sendTopic)
+                                && savePayloadString.equals(
+                                        jmri.util.StringUtil.getNameFromState(MqttTripleOutputSignalHead.FLASHGREEN,
+                                                MqttTripleOutputSignalHead.getDefaultValidStates(),
+                                                MqttTripleOutputSignalHead.getDefaultValidStateNames()
+                                                )
+                                        )
+                                ) {
+                            flashOn = true;
+                            latch.countDown();
+                        } else {
+                            if (!savePayloadString.equals(
+                                    jmri.util.StringUtil.getNameFromState(
+                                            MqttTripleOutputSignalHead.FLASHGREEN,
+                                            MqttTripleOutputSignalHead.getDefaultValidStates(),
+                                            MqttTripleOutputSignalHead.getDefaultValidStateNames()
+                                            )
+                                    )
+                                    ) {
+                                Log.warn("Got unexpected message ",
+                                        savePayloadString,
+                                        " should have been ",
+                                        jmri.util.StringUtil.getNameFromState(MqttTripleOutputSignalHead.FLASHGREEN,
+                                                MqttTripleOutputSignalHead.getDefaultValidStates(),
+                                                MqttTripleOutputSignalHead.getDefaultValidStateNames()
+                                                )
+                                        );
+                            }
+                            
+                            if (!saveTopic.equals(sendTopic)) {
+                                Log.warn("Got unexpected topic ",
+                                        saveTopic,
+                                        " should have been ",
+                                        sendTopic);
+                            }
+                           
+                        }
+                    }
+                }
             }
         };
         
@@ -94,6 +155,7 @@ public class MqttTripleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
         prefix = null;
         sendTopic = null;
         rcvTopic = null;
+        latch = null;
         a.dispose();
         a = null;
         JUnitUtil.tearDown();
@@ -144,7 +206,7 @@ public class MqttTripleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
         Assert.assertEquals("appearance", SignalHead.DARK, s.getAppearance());
     }
     
-    //TODO test all valid aspects
+    // test all valid aspects
     @Test
     public void testAllAspects() {
         SignalHead s = getHeadToTest();
@@ -183,6 +245,22 @@ public class MqttTripleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
         }
     }
 
-    //TODO test flash pulse generation
-    
+    // test flash pulse generation
+    @Test
+    public void testFlashPulseGen() {
+        latch = new CountDownLatch(3); // wait for 3 flashes
+        flashOn = true; // match default state in Signal Head flash logic
+        
+        SignalHead s = getHeadToTest();
+                
+        s.setAppearance(SignalHead.FLASHGREEN);
+        
+        try {
+            latch.await(5,TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        
+        Assert.assertEquals("Flash Test Timeout",0,latch.getCount());
+    }
 }
