@@ -243,6 +243,8 @@ public class MqttTripleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
                     new String(savePayload)
                     );
         }
+        
+        s.dispose();    // Should be called in tear down, but s isn't in scope then
     }
 
     // test flash pulse generation
@@ -262,5 +264,7 @@ public class MqttTripleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
         }
         
         Assert.assertEquals("Flash Test Timeout",0,latch.getCount());
+        
+        s.dispose();    // Should be called in tear down, but s isn't in scope then
     }
 }
