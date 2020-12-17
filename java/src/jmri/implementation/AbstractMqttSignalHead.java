@@ -56,6 +56,11 @@ public abstract class AbstractMqttSignalHead extends AbstractSignalHead implemen
 
     public static int masterDelay = 750;
     
+    // Define FLASHDARK here, since it isn't a standard Signal Head appearance.  Should it be moved up to SignalHead interface?
+    public static final int FLASHDARK = 0x200;
+    
+    public static String flashDarkName = Bundle.getMessage("SignalHeadStateFlashDark");
+    
     final static private int[] validStates = new int[]{
             DARK,
             RED,
@@ -349,9 +354,9 @@ public abstract class AbstractMqttSignalHead extends AbstractSignalHead implemen
                 || (mAppearance == FLASHRED))
                 && !mCanFlash) {
 
-            log.info("In a flash, so sending DARK");
+//            log.info("In a flash, so sending FLASHDARK");
             
-            toSend = parser.payloadFromBean(this, DARK);
+            toSend = parser.payloadFromBean(this, FLASHDARK);
 
         } else {
 
@@ -403,20 +408,35 @@ public abstract class AbstractMqttSignalHead extends AbstractSignalHead implemen
         @Override
         public void beanFromPayload(@Nonnull SignalHead bean, @Nonnull String payload, @Nonnull String topic) {
             int oldAppearance = mAppearance; // store the current appearance
-            int newAppearance = jmri.util.StringUtil.getStateFromName(
-                    payload, getValidStates(), getValidStateNames());
-
+            int newAppearance = mAppearance; // initialize newAppearance to current appearance so it will be valid, even when in FLASHDARK state
+            
+            if (!payload.equals(flashDarkName)) {     // FLASHDARK is not a standard Signal Head appearance, so we handle it here
+                newAppearance = jmri.util.StringUtil.getStateFromName(
+                        payload, getValidStates(), getValidStateNames());
+            }
+            
             boolean couldBeSendMessage = topic.endsWith(sendTopic);
             boolean couldBeRcvMessage = topic.endsWith(rcvTopic);
 
             if (couldBeSendMessage) {
-//                setCommandedState(state);
-                //TODO processing received appearances on the sending channel breaks flashing (since sending the "Dark" appearance is echoed back by the broker, which we process and change state to dark.  Either need to remove ability to flash, not process commands, or maybe implement a FLASHDARK state to differentiate between DARK and "between flashes"
-       /*         // Someone else has commanded this signal.  Assume they have a reason and update our model
+                /*
+                 *************** BUG ***************
+                 * Processing received appearances on the sending channel as
+                 * external commands breaks flashing (since sending the "Dark"
+                 * appearance is echoed back by the broker, which we process as
+                 * an external command, and change state to Dark).  Either need
+                 * to remove ability to generate flash pulses, not process 
+                 * external commands, or implement a FLASHDARK state to
+                 * differentiate between DARK and "between flashes".
+                 * 
+                 * This branch implements the third option, FLASHDARK.
+                 * 
+                 */
+                
+                // Someone else has commanded this signal.  Assume they have a reason and update our model
                 
                 // validate new state
                 if (newAppearance == -1) {
-                    //TODO throw IllegalArgumentException
                     log.warn("Got unsupported Signal Head Appearance \"{}\" from MQTT topic {}",payload,topic);
                     newAppearance = DARK;    // Set signal in JMRI to DARK since we don't know what it's been set to
                 }
@@ -425,13 +445,14 @@ public abstract class AbstractMqttSignalHead extends AbstractSignalHead implemen
                 appearanceSetsFlashTimer(newAppearance);
 
                 // notify listeners, if any
-                firePropertyChange("Appearance", oldAppearance, newAppearance);*/
+                firePropertyChange("Appearance", oldAppearance, newAppearance);
+                
              // Got a command, maybe from someone else, just log it for now
-                log.info("Got MQTT Signal Head command {} {}", topic, payload);
+//                log.info("Got potential MQTT Signal Head external command {} {}", topic, payload);
             } else if (couldBeRcvMessage) {
-                //TODO process feedback, check for unsupported states
+                //TODO process feedback, check for unsupported states or errors
                 // Got feedback, just log it for now
-                log.info("Got MQTT Signal Head feedback {} {}", topic, payload);
+                log.info("Got potential MQTT Signal Head feedback {} {}", topic, payload);
 //                setState(state);
             } else {
                 log.warn("failure to decode topic {} {}", topic, payload);
@@ -449,10 +470,15 @@ public abstract class AbstractMqttSignalHead extends AbstractSignalHead implemen
          */
         @Override
         public @Nonnull String payloadFromBean(@Nonnull SignalHead bean, int appearance){
-
+            String toReturn;
+            
             // Send the JMRI state name as a message to the MQTT device
-            //TODO is this correct? Will this return an internationalized version of state name? Thats bad, right?  Consider moving away from "as shown in JMRI" using Bundle properties and go to specific strings based on those values.  Also could remove white space from "Flashing Red"
-            String toReturn = jmri.util.StringUtil.getNameFromState(appearance, getValidStates(), getValidStateNames());
+            if (appearance == FLASHDARK) {
+                toReturn = flashDarkName;
+            } else {
+                //TODO is this correct? Will this return an internationalized version of state name? Thats bad, right?  Consider moving away from "as shown in JMRI" using Bundle properties and go to specific strings based on those values.  Also could remove white space from "Flashing Red"
+                toReturn = jmri.util.StringUtil.getNameFromState(appearance, getValidStates(), getValidStateNames());
+            }
             
 //            log.info("Got appearance {}, sending string {}",appearance,toReturn);
             

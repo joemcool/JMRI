@@ -67,6 +67,7 @@ public class MqttTripleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
 
         subBeforeConfigWarningSent = false;
         flashOn = false;
+        latch = null;
         saveTopic = null;
         savePayload = null;
         a = new MqttAdapter(){
@@ -81,13 +82,7 @@ public class MqttTripleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
                     if (flashOn) {
                         if (
                                 saveTopic.equals(sendTopic)
-                                && savePayloadString.equals(
-                                        // Static references to specific base class here because object under test hasn't been instantiated yet
-                                        jmri.util.StringUtil.getNameFromState(MqttTripleOutputSignalHead.DARK,  //TODO if implementing FLASHDARK, update this
-                                                MqttTripleOutputSignalHead.getDefaultValidStates(),
-                                                MqttTripleOutputSignalHead.getDefaultValidStateNames()
-                                                )
-                                        )
+                                && savePayloadString.equals(AbstractMqttSignalHead.flashDarkName)
                                 ) {                            
                             flashOn = false;
                         } else {
@@ -166,6 +161,8 @@ public class MqttTripleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
     public void testCTor() {
         SignalHead s = getHeadToTest();
         Assert.assertNotNull("exists",s);
+        
+        s.dispose();    // Should be called in tear down, but s isn't in scope then
     }
     
     // check initial state is DARK and that it's been sent to broker
@@ -178,9 +175,11 @@ public class MqttTripleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
         }, "topic check");
         Assert.assertEquals("message", "Dark", new String(savePayload));
         Assert.assertEquals("appearance", SignalHead.DARK, s.getAppearance());
+        
+        s.dispose();    // Should be called in tear down, but s isn't in scope then
     }
 
-    //TODO test MQTT received messages for feedback and external commands once implemented
+    //TODO test MQTT received messages for feedback once implemented
 
     // test sending MQTT commands
     @Test
@@ -205,6 +204,8 @@ public class MqttTripleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
         }, "topic check");
         Assert.assertEquals("message", "Dark", new String(savePayload));
         Assert.assertEquals("appearance", SignalHead.DARK, s.getAppearance());
+        
+        s.dispose();    // Should be called in tear down, but s isn't in scope then
     }
     
     // test all valid aspects
@@ -290,15 +291,22 @@ public class MqttTripleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
                 );
         JUnitAppender.assertWarnMessage("Signal Head Test Head 1(MH1) got unsupported new appearance 128, setting it to DARK instead");
         
+        s.dispose();    // Should be called in tear down, but s isn't in scope then
     }
 
     // test flash pulse generation
     @Test
-    public void testFlashPulseGen() {
-        latch = new CountDownLatch(3); // wait for 3 flashes
-        flashOn = true; // match default state in Signal Head flash logic
-        
+    public void testFlashPulseGen() {        
         SignalHead s = getHeadToTest();
+        
+        // wait for initial conditions
+        JUnitUtil.waitFor( ()->{
+            return sendTopic.equals(saveTopic);
+        }, "topic check");
+        Assert.assertEquals("message", "Dark", new String(savePayload));
+        Assert.assertEquals("appearance", SignalHead.DARK, s.getAppearance());
+        
+        latch = new CountDownLatch(3); // wait for 3 flashes
                 
         s.setAppearance(SignalHead.FLASHGREEN);
         
@@ -307,8 +315,74 @@ public class MqttTripleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        
+                
         Assert.assertEquals("Flash Test Timeout",0,latch.getCount());
+        
+        s.dispose();    // Should be called in tear down, but s isn't in scope then
+    }
+    
+    // test receiving external commands
+    @Test
+    public void testExternalCommands() {
+        SignalHead s = getHeadToTest();
+        
+        // Don't generate flash pulses for this test
+        ((AbstractMqttSignalHead) s).setCanFlash(true);
+        
+        // For each valid appearance
+        for (int appearance : s.getValidStates()) {
+            // Send an message to the Signal Head on the MQTT command topic
+            ((AbstractMqttSignalHead) s).notifyMqttMessage(
+                    sendTopic,
+                    jmri.util.StringUtil.getNameFromState(
+                            appearance,
+                            s.getValidStates(),
+                            s.getValidStateNames()
+                            )
+                    );
+            
+            // Check that the appearance was set
+            Assert.assertEquals("appearance", appearance, s.getAppearance());
+        }
+        
+        s.dispose();    // Should be called in tear down, but s isn't in scope then
+    }
+    
+    // test Lunar aspect is invalid
+    @Test
+    public void testNoExternalLunarAspects(){
+        SignalHead s = getHeadToTest();
+        
+        // Don't generate flash pulses for this test
+        ((AbstractMqttSignalHead) s).setCanFlash(true);
+        
+        // Send an external Lunar command message to the Signal Head on the MQTT command topic
+        ((AbstractMqttSignalHead) s).notifyMqttMessage(
+                sendTopic,
+                jmri.util.StringUtil.getNameFromState(
+                        SignalHead.LUNAR,
+                        AbstractSignalHead.getDefaultValidStates(),
+                        AbstractSignalHead.getDefaultValidStateNames()
+                        )
+                );
+        
+        Assert.assertEquals("appearance", SignalHead.DARK, s.getAppearance());
+
+        JUnitAppender.assertWarnMessage("Got unsupported Signal Head Appearance \"Lunar\" from MQTT topic track/signalhead/1");
+        
+        // Send an external Flashing Lunar command message to the Signal Head on the MQTT command topic
+        ((AbstractMqttSignalHead) s).notifyMqttMessage(
+                sendTopic,
+                jmri.util.StringUtil.getNameFromState(
+                        SignalHead.FLASHLUNAR,
+                        AbstractSignalHead.getDefaultValidStates(),
+                        AbstractSignalHead.getDefaultValidStateNames()
+                        )
+                );
+        
+        Assert.assertEquals("appearance", SignalHead.DARK, s.getAppearance());
+
+        JUnitAppender.assertWarnMessage("Got unsupported Signal Head Appearance \"Flashing Lunar\" from MQTT topic track/signalhead/1");
         
         s.dispose();    // Should be called in tear down, but s isn't in scope then
     }
