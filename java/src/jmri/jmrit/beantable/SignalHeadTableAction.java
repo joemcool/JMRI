@@ -35,7 +35,6 @@ import jmri.NamedBeanHandle;
 import jmri.SignalHead;
 import jmri.SignalHeadManager;
 import jmri.Turnout;
-import jmri.implementation.AbstractMqttSignalHead;
 import jmri.implementation.DccSignalHead;
 import jmri.implementation.DoubleTurnoutSignalHead;
 import jmri.implementation.QuadOutputSignalHead;
@@ -576,6 +575,7 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
     private String dccSignalDecoder = Bundle.getMessage("StringDccSigDec");
     private String mergSignalDriver = Bundle.getMessage("StringMerg");
     private String singleTurnout = Bundle.getMessage("StringSingle");
+    private String mqttDoubleOutput = Bundle.getMessage("StringMqttDoubleOutput");
     private String mqttTripleOutput = Bundle.getMessage("StringMqttTripleOutput");
 
     private JComboBox<String> prefixBox = new JComboBox<String>();
@@ -778,6 +778,7 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
             // For MQTT Signal Heads
             List<jmri.jmrix.mqtt.MqttSystemConnectionMemo> mqttMemos = InstanceManager.getList(jmri.jmrix.mqtt.MqttSystemConnectionMemo.class);
             if (!mqttMemos.isEmpty()) { // If at least one MQTT broker is connected
+                typeBox.addItem(mqttDoubleOutput); // Add MQTT Double Output to selection options
                 typeBox.addItem(mqttTripleOutput); // Add MQTT Triple Output to selection options
             }
             typeBox.addActionListener(new ActionListener() {
@@ -1092,7 +1093,10 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
             systemNameLabel.setVisible(true);
             systemNameTextField.setVisible(true);
             userNameLabel.setText(Bundle.getMessage("LabelUserName"));
-        } else if (mqttTripleOutput.equals(typeBox.getSelectedItem())) {    // MQTT Triple Output Signal Head
+        } else if (                                                     // MQTT Signal Heads
+                mqttDoubleOutput.equals(typeBox.getSelectedItem())
+                || mqttTripleOutput.equals(typeBox.getSelectedItem())
+                ) {
             //TODO may need to add more settings later (multiple brokers)
             systemNameLabel.setText(Bundle.getMessage("LabelSystemName"));
             systemNameTextField.setToolTipText(Bundle.getMessage("SignalHeadMqttTooltip"));
@@ -1511,7 +1515,10 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
                     s = new jmri.implementation.VirtualSignalHead(systemNameTextField.getText(), userNameTextField.getText());
                     InstanceManager.getDefault(jmri.SignalHeadManager.class).register(s);
                 }
-            } else if (mqttTripleOutput.equals(typeBox.getSelectedItem())) {    // MQTT Triple Output Signal Head
+            } else if (                                                 // MQTT Signal Heads
+                    mqttDoubleOutput.equals(typeBox.getSelectedItem())
+                    || mqttTripleOutput.equals(typeBox.getSelectedItem())
+                    ) {
                 if (checkBeforeCreating(systemNameTextField.getText())) {
                     String systemName = systemNameTextField.getText();
                     String userName = userNameTextField.getText();
@@ -1524,6 +1531,7 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
                     // Get topic suffix (systemName without system prefix)
                     String suffix = systemName.substring(memo.getSystemPrefix().length() + 1);
 
+                    // Generate send and receive topics
                     String sendTopic = java.text.MessageFormat.format(
                         topicPrefix.contains("{0}") ? topicPrefix : (topicPrefix + "{0}"),
                         suffix);
@@ -1531,8 +1539,17 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
                         topicPrefix.contains("{0}") ? topicPrefix : (topicPrefix + "{0}"),
                         suffix);
                     
-                    s = new jmri.implementation.MqttTripleOutputSignalHead(memo.getMqttAdapter(), systemName, userName, sendTopic, rcvTopic, mqttCanFlashCb.isSelected());
+                    // Instantiate object based on type selection
+                    if (mqttDoubleOutput.equals(typeBox.getSelectedItem())) {
+                        s = new jmri.implementation.MqttDoubleOutputSignalHead(memo.getMqttAdapter(), systemName, userName, sendTopic, rcvTopic, mqttCanFlashCb.isSelected());
+                    } else {    // Triple Output is default
+                        s = new jmri.implementation.MqttTripleOutputSignalHead(memo.getMqttAdapter(), systemName, userName, sendTopic, rcvTopic, mqttCanFlashCb.isSelected());
+                    }
+                    
+                    // Set up Signal Head
                     s.setUserName(userName);
+                    
+                    // Register Signal Head with Instance Manager
                     InstanceManager.getDefault(jmri.SignalHeadManager.class).register(s);
                 }
             } else if (lsDec.equals(typeBox.getSelectedItem())) { // LDT LS-DEC
@@ -2195,7 +2212,7 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
             eSysNameLabel.setText(curS.getSystemName());
             eUserNameLabel.setText(Bundle.getMessage("LabelUserName"));
             eUserName.setText(curS.getUserName());
-        } else if (jmri.implementation.AbstractMqttSignalHead.class.isAssignableFrom(curS.getClass())) {    // MQTT Triple Output Signal Head
+        } else if (jmri.implementation.AbstractMqttSignalHead.class.isAssignableFrom(curS.getClass())) {    // MQTT Signal Heads
             //TODO update to reflect any changes to creation dialog
             signalType.setText(mqttTripleOutput);
             eSystemNameLabel.setText(Bundle.getMessage("LabelSystemName"));
@@ -2606,7 +2623,7 @@ public class SignalHeadTableAction extends AbstractTableAction<SignalHead> {
              if(checkUserName(nam))
              curS.setUserName(nam);
              }*/
-        } else if (jmri.implementation.AbstractMqttSignalHead.class.isAssignableFrom(curS.getClass())) { 
+        } else if (jmri.implementation.AbstractMqttSignalHead.class.isAssignableFrom(curS.getClass())) {    // MQTT Signal Heads
             ((jmri.implementation.AbstractMqttSignalHead) curS).setCanFlash(eMqttCanFlashCb.isSelected());
         } else if (className.equals("jmri.jmrix.acela.AcelaSignalHead")) {
             /*String nam = eUserName.getText();

@@ -283,7 +283,15 @@ public abstract class AbstractMqttSignalHead extends AbstractSignalHead implemen
      * {@inheritDoc}
      */
     @Override
-    public String[] getValidStateNames() {
+    public String[] getValidStateKeys() {
+        return Arrays.copyOf(validStateKeys, validStateKeys.length);
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String[] getValidStateNames() {        
         String[] stateNames = new String[validStateKeys.length];
         int i = 0;
         for (String stateKey : validStateKeys) {

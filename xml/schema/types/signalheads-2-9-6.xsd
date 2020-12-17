@@ -51,6 +51,7 @@
             <jmri:usingclass configurexml="true">jmri.implementation.configurexml.SE8cSignalHeadXml</jmri:usingclass>
             <jmri:usingclass configurexml="true">jmri.implementation.configurexml.TripleTurnoutSignalHeadXml</jmri:usingclass>
             <jmri:usingclass configurexml="true">jmri.implementation.configurexml.VirtualSignalHeadXml</jmri:usingclass>
+            <jmri:usingclass configurexml="true">jmri.implementation.configurexml.MqttDoubleOutputSignalHeadXml</jmri:usingclass>
             <jmri:usingclass configurexml="true">jmri.implementation.configurexml.MqttTripleOutputSignalHeadXml</jmri:usingclass>
             <jmri:usingclass configurexml="true">jmri.jmrix.acela.configurexml.AcelaSignalHeadXml</jmri:usingclass>
             <jmri:usingclass configurexml="true">jmri.jmrix.grapevine.configurexml.SerialSignalHeadXml</jmri:usingclass>

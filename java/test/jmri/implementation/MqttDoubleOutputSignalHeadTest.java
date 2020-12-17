@@ -13,14 +13,14 @@ import jmri.util.JUnitAppender;
 import jmri.util.JUnitUtil;
 
 /**
- * Test cases for MQTT Triple Output Signal Head
+ * Test cases for MQTT Double Output Signal Head
  * 
  * Based upon {@link jmri.implementation.TripleOutputSignalHeadTest} by Paul Bender
  * Based upon {@link jmri.jmrix.mqtt.MqttLightTest} by Bob Jacobsen
  * 
  * @author Joe Martin Copyright (C) 2020
  */
-public class MqttTripleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
+public class MqttDoubleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
 
     // Adapter and adapter IO fields
     MqttAdapter a;
@@ -42,9 +42,9 @@ public class MqttTripleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
 
     @Override
     SignalHead getHeadToTest() {
-        MqttTripleOutputSignalHead toReturn;
+        MqttDoubleOutputSignalHead toReturn;
 
-        toReturn = new MqttTripleOutputSignalHead(
+        toReturn = new MqttDoubleOutputSignalHead(
                 a,              // MQTT Adapter
                 systemName,     // System Name
                 "Test Head 1",  // User Name
@@ -83,9 +83,9 @@ public class MqttTripleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
                                 saveTopic.equals(sendTopic)
                                 && savePayloadString.equals(
                                         // Static references to specific base class here because object under test hasn't been instantiated yet
-                                        jmri.util.StringUtil.getNameFromState(MqttTripleOutputSignalHead.DARK,  //TODO if implementing FLASHDARK, update this
-                                                MqttTripleOutputSignalHead.getDefaultValidStates(),
-                                                MqttTripleOutputSignalHead.getDefaultValidStateNames()
+                                        jmri.util.StringUtil.getNameFromState(MqttDoubleOutputSignalHead.DARK,  //TODO if implementing FLASHDARK, update this
+                                                MqttDoubleOutputSignalHead.getDefaultValidStates(),
+                                                MqttDoubleOutputSignalHead.getDefaultValidStateNames()
                                                 )
                                         )
                                 ) {                            
@@ -97,9 +97,9 @@ public class MqttTripleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
                         if (
                                 saveTopic.equals(sendTopic)
                                 && savePayloadString.equals(
-                                        jmri.util.StringUtil.getNameFromState(MqttTripleOutputSignalHead.FLASHGREEN,
-                                                MqttTripleOutputSignalHead.getDefaultValidStates(),
-                                                MqttTripleOutputSignalHead.getDefaultValidStateNames()
+                                        jmri.util.StringUtil.getNameFromState(MqttDoubleOutputSignalHead.FLASHGREEN,
+                                                MqttDoubleOutputSignalHead.getDefaultValidStates(),
+                                                MqttDoubleOutputSignalHead.getDefaultValidStateNames()
                                                 )
                                         )
                                 ) {
@@ -108,18 +108,18 @@ public class MqttTripleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
                         } else {
                             if (!savePayloadString.equals(
                                     jmri.util.StringUtil.getNameFromState(
-                                            MqttTripleOutputSignalHead.FLASHGREEN,
-                                            MqttTripleOutputSignalHead.getDefaultValidStates(),
-                                            MqttTripleOutputSignalHead.getDefaultValidStateNames()
+                                            MqttDoubleOutputSignalHead.FLASHGREEN,
+                                            MqttDoubleOutputSignalHead.getDefaultValidStates(),
+                                            MqttDoubleOutputSignalHead.getDefaultValidStateNames()
                                             )
                                     )
                                     ) {
                                 Log.warn("Got unexpected message ",
                                         savePayloadString,
                                         " should have been ",
-                                        jmri.util.StringUtil.getNameFromState(MqttTripleOutputSignalHead.FLASHGREEN,
-                                                MqttTripleOutputSignalHead.getDefaultValidStates(),
-                                                MqttTripleOutputSignalHead.getDefaultValidStateNames()
+                                        jmri.util.StringUtil.getNameFromState(MqttDoubleOutputSignalHead.FLASHGREEN,
+                                                MqttDoubleOutputSignalHead.getDefaultValidStates(),
+                                                MqttDoubleOutputSignalHead.getDefaultValidStateNames()
                                                 )
                                         );
                             }
@@ -227,8 +227,8 @@ public class MqttTripleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
             // out for now just in case.
 //            Log.warn("Setting appearance",jmri.util.StringUtil.getNameFromState(
 //                    appearance,
-//                    ((MqttTripleOutputSignalHead) s).getValidStates(),
-//                    ((MqttTripleOutputSignalHead) s).getValidStateNames()
+//                    ((MqttDoubleOutputSignalHead) s).getValidStates(),
+//                    ((MqttDoubleOutputSignalHead) s).getValidStateNames()
 //                    ),appearance);
             
             JUnitUtil.waitFor( ()->{
@@ -289,6 +289,50 @@ public class MqttTripleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
                 new String(savePayload)
                 );
         JUnitAppender.assertWarnMessage("Signal Head Test Head 1(MH1) got unsupported new appearance 128, setting it to DARK instead");
+        
+    }
+    
+    // test Yellow aspect is invalid
+    @Test
+    public void testNoYellowAspects(){
+        SignalHead s = getHeadToTest();
+        
+        // Don't generate flash pulses for this test
+        ((AbstractMqttSignalHead) s).setCanFlash(true);
+        
+        // Set Yellow
+        s.setAppearance(SignalHead.YELLOW);
+        
+        JUnitUtil.waitFor( ()->{
+            return sendTopic.equals(saveTopic);
+        }, "topic check");
+        Assert.assertEquals("appearance", SignalHead.DARK, s.getAppearance());
+        Assert.assertEquals("message",
+                jmri.util.StringUtil.getNameFromState(
+                        SignalHead.DARK,
+                        s.getValidStates(),
+                        s.getValidStateNames()
+                        ),
+                new String(savePayload)
+                );
+        JUnitAppender.assertWarnMessage("Signal Head Test Head 1(MH1) got unsupported new appearance 4, setting it to DARK instead");
+        
+        // Set Flashing Yellow
+        s.setAppearance(SignalHead.FLASHYELLOW);
+        
+        JUnitUtil.waitFor( ()->{
+            return sendTopic.equals(saveTopic);
+        }, "topic check");
+        Assert.assertEquals("appearance", SignalHead.DARK, s.getAppearance());
+        Assert.assertEquals("message",
+                jmri.util.StringUtil.getNameFromState(
+                        SignalHead.DARK,
+                        s.getValidStates(),
+                        s.getValidStateNames()
+                        ),
+                new String(savePayload)
+                );
+        JUnitAppender.assertWarnMessage("Signal Head Test Head 1(MH1) got unsupported new appearance 8, setting it to DARK instead");
         
     }
 

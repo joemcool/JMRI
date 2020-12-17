@@ -10,31 +10,27 @@ import jmri.implementation.AbstractMqttSignalHead;
 import jmri.jmrix.mqtt.MqttAdapter;
 import jmri.jmrix.mqtt.MqttEventListener;
 
-public class MqttTripleOutputSignalHead extends AbstractMqttSignalHead implements MqttEventListener{
+public class MqttDoubleOutputSignalHead extends AbstractMqttSignalHead implements MqttEventListener{
 
-    public MqttTripleOutputSignalHead(MqttAdapter ma, String systemName, String userName, String sendTopic, String rcvTopic, boolean canFlash) {
+    public MqttDoubleOutputSignalHead(MqttAdapter ma, String systemName, String userName, String sendTopic, String rcvTopic, boolean canFlash) {
         super(ma, systemName, userName, sendTopic, rcvTopic, canFlash);
     }
     
     final static private int[] validStates = new int[]{
             DARK,
             RED,
-            YELLOW,
             GREEN,
             FLASHRED,
-            FLASHYELLOW,
             FLASHGREEN,
-    }; // No int for Lunar
+    }; // No int for Yellow or Lunar
 
     final static private String[] validStateKeys = new String[]{
             "SignalHeadStateDark",
             "SignalHeadStateRed",
-            "SignalHeadStateYellow",
             "SignalHeadStateGreen",
             "SignalHeadStateFlashingRed",
-            "SignalHeadStateFlashingYellow",
             "SignalHeadStateFlashingGreen",
-    }; // Lunar not included
+    }; // Lunar and Yellow not included
     
     /**
      * {@inheritDoc}
@@ -56,7 +52,7 @@ public class MqttTripleOutputSignalHead extends AbstractMqttSignalHead implement
      * {@inheritDoc}
      */
     @Override
-    public String[] getValidStateNames() {
+    public String[] getValidStateNames() {        
         String[] stateNames = new String[validStateKeys.length];
         int i = 0;
         for (String stateKey : validStateKeys) {
@@ -66,6 +62,6 @@ public class MqttTripleOutputSignalHead extends AbstractMqttSignalHead implement
     }
     
     @SuppressWarnings("unused")
-    private final static Logger log = LoggerFactory.getLogger(MqttTripleOutputSignalHead.class);
+    private final static Logger log = LoggerFactory.getLogger(MqttDoubleOutputSignalHead.class);
 
 }

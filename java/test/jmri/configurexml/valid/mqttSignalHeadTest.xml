@@ -10,7 +10,12 @@
   <signalheads class="jmri.managers.configurexml.AbstractSignalHeadManagerXml">
     <signalhead class="jmri.implementation.configurexml.MqttTripleOutputSignalHeadXml">
       <systemName>MH1</systemName>
-      <userName>test user name</userName>
+      <userName>MQTT Triple Output Signal Head</userName>
+      <canFlash>true</canFlash>
+    </signalhead>
+    <signalhead class="jmri.implementation.configurexml.MqttDoubleOutputSignalHeadXml">
+      <systemName>MH2</systemName>
+      <userName>MQTT Double Output Signal Head</userName>
       <canFlash>true</canFlash>
     </signalhead>
   </signalheads>
