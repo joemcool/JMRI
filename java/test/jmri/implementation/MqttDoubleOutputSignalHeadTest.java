@@ -67,6 +67,7 @@ public class MqttDoubleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
 
         subBeforeConfigWarningSent = false;
         flashOn = false;
+        latch = null;
         saveTopic = null;
         savePayload = null;
         a = new MqttAdapter(){
@@ -166,6 +167,8 @@ public class MqttDoubleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
     public void testCTor() {
         SignalHead s = getHeadToTest();
         Assert.assertNotNull("exists",s);
+        
+        s.dispose();    // Should be called in tear down, but s isn't in scope then
     }
     
     // check initial state is DARK and that it's been sent to broker
@@ -178,6 +181,8 @@ public class MqttDoubleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
         }, "topic check");
         Assert.assertEquals("message", "Dark", new String(savePayload));
         Assert.assertEquals("appearance", SignalHead.DARK, s.getAppearance());
+        
+        s.dispose();    // Should be called in tear down, but s isn't in scope then
     }
 
     //TODO test MQTT received messages for feedback and external commands once implemented
@@ -205,6 +210,8 @@ public class MqttDoubleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
         }, "topic check");
         Assert.assertEquals("message", "Dark", new String(savePayload));
         Assert.assertEquals("appearance", SignalHead.DARK, s.getAppearance());
+        
+        s.dispose();    // Should be called in tear down, but s isn't in scope then
     }
     
     // test all valid aspects
@@ -290,6 +297,7 @@ public class MqttDoubleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
                 );
         JUnitAppender.assertWarnMessage("Signal Head Test Head 1(MH1) got unsupported new appearance 128, setting it to DARK instead");
         
+        s.dispose();    // Should be called in tear down, but s isn't in scope then
     }
     
     // test Yellow aspect is invalid
@@ -338,11 +346,17 @@ public class MqttDoubleOutputSignalHeadTest extends AbstractSignalHeadTestBase {
 
     // test flash pulse generation
     @Test
-    public void testFlashPulseGen() {
-        latch = new CountDownLatch(3); // wait for 3 flashes
-        flashOn = true; // match default state in Signal Head flash logic
-        
+    public void testFlashPulseGen() {        
         SignalHead s = getHeadToTest();
+        
+        // wait for initial conditions
+        JUnitUtil.waitFor( ()->{
+            return sendTopic.equals(saveTopic);
+        }, "topic check");
+        Assert.assertEquals("message", "Dark", new String(savePayload));
+        Assert.assertEquals("appearance", SignalHead.DARK, s.getAppearance());
+        
+        latch = new CountDownLatch(3); // wait for 3 flashes
                 
         s.setAppearance(SignalHead.FLASHGREEN);
         

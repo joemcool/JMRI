@@ -349,7 +349,7 @@ public abstract class AbstractMqttSignalHead extends AbstractSignalHead implemen
                 || (mAppearance == FLASHRED))
                 && !mCanFlash) {
 
-            log.info("In a flash, so sending DARK");
+//            log.info("In a flash, so sending DARK");
             
             toSend = parser.payloadFromBean(this, DARK);
 
@@ -416,7 +416,6 @@ public abstract class AbstractMqttSignalHead extends AbstractSignalHead implemen
                 
                 // validate new state
                 if (newAppearance == -1) {
-                    //TODO throw IllegalArgumentException
                     log.warn("Got unsupported Signal Head Appearance \"{}\" from MQTT topic {}",payload,topic);
                     newAppearance = DARK;    // Set signal in JMRI to DARK since we don't know what it's been set to
                 }
@@ -426,12 +425,13 @@ public abstract class AbstractMqttSignalHead extends AbstractSignalHead implemen
 
                 // notify listeners, if any
                 firePropertyChange("Appearance", oldAppearance, newAppearance);*/
-             // Got a command, maybe from someone else, just log it for now
-                log.info("Got MQTT Signal Head command {} {}", topic, payload);
+
+            	// Got a command, maybe from someone else, just log it for now
+//                log.info("Got potential MQTT Signal Head external command {} {}", topic, payload);
             } else if (couldBeRcvMessage) {
-                //TODO process feedback, check for unsupported states
+                //TODO process feedback, check for unsupported states or errors
                 // Got feedback, just log it for now
-                log.info("Got MQTT Signal Head feedback {} {}", topic, payload);
+                log.info("Got potential MQTT Signal Head feedback {} {}", topic, payload);
 //                setState(state);
             } else {
                 log.warn("failure to decode topic {} {}", topic, payload);
@@ -449,10 +449,11 @@ public abstract class AbstractMqttSignalHead extends AbstractSignalHead implemen
          */
         @Override
         public @Nonnull String payloadFromBean(@Nonnull SignalHead bean, int appearance){
-
+            String toReturn;
+            
             // Send the JMRI state name as a message to the MQTT device
             //TODO is this correct? Will this return an internationalized version of state name? Thats bad, right?  Consider moving away from "as shown in JMRI" using Bundle properties and go to specific strings based on those values.  Also could remove white space from "Flashing Red"
-            String toReturn = jmri.util.StringUtil.getNameFromState(appearance, getValidStates(), getValidStateNames());
+            toReturn = jmri.util.StringUtil.getNameFromState(appearance, getValidStates(), getValidStateNames());
             
 //            log.info("Got appearance {}, sending string {}",appearance,toReturn);
             
